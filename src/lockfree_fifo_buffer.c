@@ -254,5 +254,5 @@ size_t lockfree_fifo_buffer_next_index(const struct fifo_buffer *const self, con
     const struct lockfree_fifo_buffer *const _self = (const struct lockfree_fifo_buffer *)self;
     assert(_self->buffer != NULL);
 
-    return (index + 1) % _self->capacity;
+    return (index + 1) & (_self->capacity - 1);
 }
