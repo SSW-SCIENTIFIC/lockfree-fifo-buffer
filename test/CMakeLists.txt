@@ -21,7 +21,7 @@ target_include_directories(lockfree_fifo_buffer_test PUBLIC
     ${CMAKE_SOURCE_DIR}/src
 )
 target_link_libraries(lockfree_fifo_buffer_test lockfree_queue gtest_main)
-gtest_add_tests(TARGET lockfree_fifo_buffer_test)
+gtest_discover_tests(lockfree_fifo_buffer_test)
 
 add_executable(multiwriter_fifo_buffer_test)
 target_sources(multiwriter_fifo_buffer_test PRIVATE
@@ -31,7 +31,7 @@ target_include_directories(multiwriter_fifo_buffer_test PUBLIC
     ${CMAKE_SOURCE_DIR}/src
 )
 target_link_libraries(multiwriter_fifo_buffer_test lockfree_queue gtest_main)
-gtest_add_tests(TARGET multiwriter_fifo_buffer_test)
+gtest_discover_tests(multiwriter_fifo_buffer_test)
 
 set_target_properties(
     lockfree_fifo_buffer_test
