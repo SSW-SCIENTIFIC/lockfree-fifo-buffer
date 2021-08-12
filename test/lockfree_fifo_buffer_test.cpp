@@ -3,9 +3,6 @@
 
 #include <gtest/gtest.h>
 
-#include <unordered_set>
-#include <mutex>
-
 extern "C" {
 #include "lockfree_fifo_buffer.h"
 }
@@ -339,6 +336,78 @@ TEST(lockfree_fifo_buffer_peek_test, it_peaks_element_which_is_dequeued_next)
 
             ASSERT_EQ(*element, dequeued);
         }
+    }
+}
+
+TEST(lockfree_fifo_buffer_count_test, it_increments_count_after_successfully_enqueued)
+{
+    auto const queue = reinterpret_cast<struct fifo_buffer *>(lockfree_fifo_buffer_new(sizeof(TestClass), 14));
+
+    const TestClass element(128);
+    size_t previous = queue->vptr->count(queue);
+    while (queue->vptr->enqueue_default(queue, &element, sizeof(element))) {
+        const size_t current = queue->vptr->count(queue);
+        ASSERT_EQ(current, previous + 1);
+        previous = current;
+    }
+}
+
+TEST(lockfree_fifo_buffer_count_test, it_does_not_increment_count_after_enqueue_failure)
+{
+    auto const queue = reinterpret_cast<struct fifo_buffer *>(lockfree_fifo_buffer_new(sizeof(TestClass), 14));
+
+    const TestClass element(128);
+    while (queue->vptr->enqueue_default(queue, &element, sizeof(element))) {
+        // do nothing
+    }
+
+    const size_t previous = queue->vptr->count(queue);
+    EXPECT_FALSE(queue->vptr->enqueue_default(queue, &element, sizeof(element)));
+    ASSERT_EQ(queue->vptr->count(queue), previous);
+}
+
+TEST(lockfree_fifo_buffer_count_test, it_decrements_count_after_successfully_dequeued)
+{
+    auto const queue = reinterpret_cast<struct fifo_buffer *>(lockfree_fifo_buffer_new(sizeof(TestClass), 14));
+
+    const TestClass element(128);
+    while (queue->vptr->enqueue_default(queue, &element, sizeof(element))) {
+        // do nothing
+    }
+
+    size_t previous = queue->vptr->count(queue);
+    while (queue->vptr->dequeue_default(queue, nullptr)) {
+        const size_t current = queue->vptr->count(queue);
+        ASSERT_EQ(current, previous - 1);
+        previous = current;
+    }
+}
+
+TEST(lockfree_fifo_buffer_count_test, it_does_not_decrement_count_after_dequeue_failure)
+{
+    auto const queue = reinterpret_cast<struct fifo_buffer *>(lockfree_fifo_buffer_new(sizeof(TestClass), 14));
+
+    const size_t previous = queue->vptr->count(queue);
+    EXPECT_FALSE(queue->vptr->dequeue_default(queue, nullptr));
+    ASSERT_EQ(queue->vptr->count(queue), previous);
+}
+
+TEST(lockfree_fifo_buffer_count_test, it_returns_count_consistently_by_enqueueing_and_dequeueing_alternately)
+{
+    auto const queue = reinterpret_cast<struct fifo_buffer *>(lockfree_fifo_buffer_new(sizeof(TestClass), 0xFF));
+
+    const TestClass element(0);
+    while (!queue->vptr->is_full(queue)) {
+        queue->vptr->enqueue_default(queue, &element, sizeof(element));
+    }
+
+    for (size_t i = 0; i < queue->vptr->capacity(queue); i++) {
+        const size_t count_full = queue->vptr->count(queue);
+        queue->vptr->dequeue_default(queue, nullptr);
+        ASSERT_EQ(queue->vptr->count(queue), count_full - 1);
+
+        queue->vptr->enqueue_default(queue, &element, sizeof(element));
+        ASSERT_EQ(queue->vptr->count(queue), count_full);
     }
 }
 
